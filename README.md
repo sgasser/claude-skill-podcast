@@ -13,9 +13,10 @@ Generate audio podcasts from text using browser text-to-speech. Zero cost, no AP
 - **TTS-Optimized**: Automatic formatting for optimal text-to-speech pronunciation
 
 ## Demo
+https://github.com/user-attachments/assets/497d7354-67b0-4180-b2ff-cf351c25ce3e
 
-> [!NOTE]
-> Demo video will be added after first push to GitHub
+
+
 
 ## Installation
 
