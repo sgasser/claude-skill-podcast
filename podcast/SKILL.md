@@ -1,7 +1,7 @@
 ---
 name: podcast
 description: Creates audio podcasts from text using browser text-to-speech. Use when user mentions podcast, audio conversation, dialogue, spoken content, voice narration, audio book, or text-to-speech generation. Supports multiple speakers with automatic language detection. Zero cost, no API keys, works in browser.
-allowed-tools: Read
+allowed-tools: Read, Write
 ---
 
 # Podcast Generator
@@ -102,7 +102,7 @@ When user requests a podcast:
    - `PODCAST_SCRIPT` - your generated dialogue
    - `PODCAST_TITLE` - descriptive title from content
    - `PODCAST_LANGUAGE` - detected language code
-5. **Return JSX component as artifact** (do NOT save to file, present directly in chat)
+5. **Save as JSX file** - Use the Write tool to save the modified template as a `.jsx` file. The file will render as an interactive podcast player.
 6. **Recommend Microsoft Edge browser** for best voice quality (250+ Natural voices vs Chrome's 19)
 
 ## Technical Reference

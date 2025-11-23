@@ -27,65 +27,31 @@ const detectPlatform = () => {
   return 'desktop';
 };
 
-// Desktop Edge voices (Microsoft Neural/Natural)
-const DESKTOP_EDGE_VOICES = {
-  de: ['Katja', 'Conrad', 'Seraphina', 'Florian', 'Amala', 'Killian'],
-  en: ['Aria', 'Guy', 'Jenny', 'Davis', 'Sara', 'Ryan', 'Zira'],
-  fr: ['Denise', 'Henri', 'Vivienne', 'Alain'],
-  es: ['Elvira', 'Jorge', 'Lucia', 'Pablo'],
-  it: ['Elsa', 'Diego', 'Isabella', 'Cosimo'],
-  pt: ['Francisca', 'Antonio', 'Raquel'],
-  nl: ['Colette', 'Fenna', 'Maarten'],
-  pl: ['Zofia', 'Marek'],
-  ru: ['Svetlana', 'Dmitry'],
-  ja: ['Nanami', 'Keita'],
-  zh: ['Xiaoxiao', 'Yunyang']
+// Heuristic-based voice quality detection with whitelist bonuses
+// Works for ALL languages and ALL 250+ Edge voices automatically
+
+// Known high-quality voices (bonus points, but not required)
+const PREMIUM_VOICES = {
+  en: ['Aria', 'Jenny', 'Guy', 'Emma', 'Andrew', 'Samantha', 'Daniel', 'Karen', 'Alex'],
+  de: ['Katja', 'Conrad', 'Seraphina', 'Florian', 'Anna', 'Petra'],
+  fr: ['Denise', 'Henri', 'Amelie', 'Thomas'],
+  es: ['Elvira', 'Lucia', 'Monica', 'Jorge'],
+  it: ['Elsa', 'Diego', 'Isabella', 'Alice', 'Luca'],
+  pt: ['Francisca', 'Antonio', 'Luciana'],
+  nl: ['Colette', 'Fenna', 'Ellen'],
+  pl: ['Zofia', 'Marek', 'Zosia'],
+  ru: ['Svetlana', 'Dmitry', 'Milena'],
+  ja: ['Nanami', 'Kyoko', 'Otoya'],
+  zh: ['Xiaoxiao', 'Ting-Ting']
 };
 
-// Chrome Desktop voices (Google high-quality voices)
-const CHROME_VOICES = {
-  de: ['Google Deutsch'],
-  en: ['Google UK English Female', 'Google UK English Male', 'Google US English'],
-  fr: ['Google français'],
-  es: ['Google español', 'Google español de Estados Unidos'],
-  it: ['Google italiano'],
-  pt: ['Google português do Brasil'],
-  nl: ['Google Nederlands'],
-  pl: ['Google polski'],
-  ru: ['Google русский язык'],
-  ja: ['Google 日本語'],
-  zh: ['Google 普通话(中国大陆)']
-};
-
-// iOS voices (native Siri voices)
-const IOS_VOICES = {
-  de: ['Anna', 'Markus', 'Petra', 'Yannick'],
-  en: ['Samantha', 'Daniel', 'Karen', 'Alex', 'Victoria', 'Fred'],
-  fr: ['Amelie', 'Thomas', 'Audrey'],
-  es: ['Monica', 'Jorge', 'Paulina'],
-  it: ['Alice', 'Luca'],
-  pt: ['Luciana', 'Joana'],
-  nl: ['Ellen', 'Xander'],
-  pl: ['Zosia', 'Krzysztof'],
-  ru: ['Milena', 'Yuri'],
-  ja: ['Kyoko', 'Otoya'],
-  zh: ['Ting-Ting', 'Sin-Ji']
-};
-
-// Android voices (Google TTS)
-const ANDROID_VOICES = {
-  de: ['Google Deutsch', 'de-DE-Wavenet'],
-  en: ['Google UK English Female', 'Google US English', 'en-US-Wavenet'],
-  fr: ['Google français', 'fr-FR-Wavenet'],
-  es: ['Google español', 'es-ES-Wavenet'],
-  it: ['Google italiano', 'it-IT-Wavenet'],
-  pt: ['Google português', 'pt-BR-Wavenet'],
-  nl: ['Google Nederlands', 'nl-NL-Wavenet'],
-  pl: ['Google polski', 'pl-PL-Wavenet'],
-  ru: ['Google русский', 'ru-RU-Wavenet'],
-  ja: ['Google 日本語', 'ja-JP-Wavenet'],
-  zh: ['Google 普通话', 'zh-CN-Wavenet']
-};
+// Voices to absolutely never use (novelty/poor quality)
+const VOICE_BLACKLIST = [
+  'Albert', 'Bahh', 'Bells', 'Boing', 'Bubbles', 'Cellos', 'Deranged',
+  'Good News', 'Jester', 'Organ', 'Superstar', 'Trinoids', 'Whisper',
+  'Wobble', 'Zarvox', 'Bad News', 'Princess', 'Ralph', 'Pipe Organ',
+  'Kathy', 'Hysterical', 'Junior', 'Flo'
+];
 
 const parseScript = (text) => {
   const lines = [];
@@ -124,63 +90,71 @@ const PodcastPlayer = () => {
       const platform = detectPlatform();
       const langCode = PODCAST_LANGUAGE.split('-')[0];
 
-      // Get platform-specific preferred voices
-      let preferredNames;
-      if (platform === 'ios') {
-        preferredNames = IOS_VOICES[langCode] || IOS_VOICES['en'];
-      } else if (platform === 'android') {
-        preferredNames = ANDROID_VOICES[langCode] || ANDROID_VOICES['en'];
-      } else if (platform === 'desktop_edge') {
-        preferredNames = DESKTOP_EDGE_VOICES[langCode] || DESKTOP_EDGE_VOICES['en'];
-      } else if (platform === 'desktop_chrome') {
-        preferredNames = CHROME_VOICES[langCode] || CHROME_VOICES['en'];
-      } else {
-        // Fallback for other desktop browsers
-        preferredNames = CHROME_VOICES[langCode] || CHROME_VOICES['en'];
+      // Get premium voices list for this language
+      const premiumList = PREMIUM_VOICES[langCode] || PREMIUM_VOICES['en'];
+
+      // Filter out blacklisted voices and filter by language
+      let langVoices = allVoices.filter(v => {
+        const isBlacklisted = VOICE_BLACKLIST.some(bad => v.name.includes(bad));
+        return !isBlacklisted && v.lang.toLowerCase().startsWith(langCode);
+      });
+
+      // Fallback to English if no voices found for language
+      if (langVoices.length === 0) {
+        langVoices = allVoices.filter(v => {
+          const isBlacklisted = VOICE_BLACKLIST.some(bad => v.name.includes(bad));
+          return !isBlacklisted && v.lang.startsWith('en');
+        });
       }
 
-      // Filter voices by language
-      let langVoices = allVoices.filter(v => v.lang.toLowerCase().startsWith(langCode));
-      if (langVoices.length === 0) langVoices = allVoices.filter(v => v.lang.startsWith('en'));
+      // Ultimate fallback: if still no voices, take any non-blacklisted voice
+      if (langVoices.length === 0) {
+        langVoices = allVoices.filter(v => {
+          const isBlacklisted = VOICE_BLACKLIST.some(bad => v.name.includes(bad));
+          return !isBlacklisted;
+        });
+      }
 
-      // Score voices based on platform preferences
+      // HEURISTIC-BASED SCORING (works for ALL voices, ALL languages)
       const scored = langVoices.map(v => {
         let score = 0;
 
-        // Match against preferred voice names
-        const nameMatch = preferredNames.findIndex(n => v.name.includes(n));
-        if (nameMatch >= 0) score += 100 - nameMatch;
+        // PRIMARY: Quality indicators (works for all 250+ Edge voices)
+        if (v.name.includes('Neural'))    score += 500; // Highest quality
+        if (v.name.includes('Natural'))   score += 500; // Highest quality
+        if (v.name.includes('Wavenet'))   score += 400; // Google high quality
+        if (v.name.includes('Premium'))   score += 300;
+        if (v.name.includes('Enhanced'))  score += 300;
 
-        // Platform-specific scoring
-        if (platform === 'desktop_edge') {
-          // Edge: prioritize Microsoft voices
-          if (v.name.includes('Microsoft')) score += 50;
-          if (v.name.includes('Neural') || v.name.includes('Natural')) score += 40;
-        } else if (platform === 'desktop_chrome') {
-          // Chrome: prioritize Google voices
-          if (v.name.includes('Google')) score += 50;
-          if (v.name.includes('Natural')) score += 30;
-        } else if (platform === 'android') {
-          // Android: prioritize Google voices
-          if (v.name.includes('Google')) score += 50;
-          if (v.name.includes('Wavenet')) score += 30;
-        } else if (platform === 'ios') {
-          // iOS: prioritize native Siri voices (no Google/Microsoft prefix)
-          if (!v.name.includes('Google') && !v.name.includes('Microsoft')) score += 50;
-        } else {
-          // Other desktop browsers: prefer Google voices if available
-          if (v.name.includes('Google')) score += 40;
+        // SECONDARY: Provider reputation
+        if (v.name.includes('Microsoft')) score += 250;
+        if (v.name.includes('Google'))    score += 200;
+        if (!v.name.includes('Google') && !v.name.includes('Microsoft')) {
+          // Likely Apple/native voices (good on iOS/macOS)
+          score += 150;
         }
+
+        // TERTIARY: Known premium voices (bonus)
+        const isPremium = premiumList.some(name => v.name.includes(name));
+        if (isPremium) score += 100;
+
+        // PLATFORM-SPECIFIC: Prefer local voices
+        if (v.localService) score += 50; // Offline-capable voices
+
+        // BASELINE: All non-blacklisted voices get minimum score
+        if (score === 0) score = 10;
 
         return { voice: v, score };
       });
 
+      // Sort by score (highest first)
       scored.sort((a, b) => b.score - a.score);
 
-      // Deduplicate by name - keep only first occurrence of each voice name
+      // Deduplicate by base name
       const uniqueVoices = [];
       const seenNames = new Set();
       for (const item of scored) {
+        // Only split at '(' to remove language/region suffix, not at '-'
         const baseName = item.voice.name.split('(')[0].trim();
         if (!seenNames.has(baseName)) {
           seenNames.add(baseName);
@@ -192,13 +166,20 @@ const PodcastPlayer = () => {
       const uniqueSpeakers = [...new Set(lines.map(l => l.speaker))];
       const numSpeakersNeeded = uniqueSpeakers.length;
 
-      // Take top N unique voices, fallback to all voices if needed
+      // Take top N unique voices
       let voicesToUse = uniqueVoices.slice(0, numSpeakersNeeded);
-      if (voicesToUse.length < numSpeakersNeeded) {
-        voicesToUse = allVoices.slice(0, numSpeakersNeeded);
+
+      // Fallback: if we don't have enough voices, use what we have
+      if (voicesToUse.length < numSpeakersNeeded && uniqueVoices.length > 0) {
+        voicesToUse = uniqueVoices;
       }
 
-      // Assign voices to speakers
+      // Final safety: if no voices at all, use first available voice (should never happen)
+      if (voicesToUse.length === 0 && allVoices.length > 0) {
+        voicesToUse = [allVoices[0]];
+      }
+
+      // Assign voices to speakers using modulo for cycling
       const assignments = {};
       uniqueSpeakers.forEach((spk, idx) => {
         assignments[spk] = voicesToUse[idx % voicesToUse.length];
@@ -207,12 +188,19 @@ const PodcastPlayer = () => {
       setVoices(assignments);
       setVoicesReady(true);
 
-      // Set debug info
+      // Set debug info with scores for transparency
+      const speaker1Voice = assignments[1];
+      const speaker2Voice = assignments[2];
+      const speaker1Score = speaker1Voice ? scored.find(s => s.voice === speaker1Voice)?.score : 0;
+      const speaker2Score = speaker2Voice ? scored.find(s => s.voice === speaker2Voice)?.score : 0;
+
       setDebugInfo({
         platform: platform,
         voiceCount: allVoices.length,
-        speaker1: assignments[1]?.name || 'N/A',
-        speaker2: assignments[2]?.name || 'N/A'
+        speaker1: speaker1Voice?.name || 'N/A',
+        speaker2: speaker2Voice?.name || 'N/A',
+        score1: speaker1Score,
+        score2: speaker2Score
       });
     };
 
